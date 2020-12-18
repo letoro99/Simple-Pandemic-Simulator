@@ -38,8 +38,8 @@ if __name__ == "__main__":
     glClearColor(0,0,0,0)
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
-    poblacion = Sociedad(100,0.5,0.1,5) # Numero personas, prob_contagio, radio_contagio, dias_recuperacion
-    poblacion.actualizar_puntos()
+    poblacion = Sociedad(500,0.05,0.1,10,0.2) # Numero personas, prob_contagio, radio_contagio, dias_recuperacion, prob_morir
+    poblacion.actualizar_puntos(0)
 
     controlador.set_sociedad(poblacion)
 
@@ -50,18 +50,16 @@ if __name__ == "__main__":
         
         ti = glfw.get_time()
         dt = ti - t0
-
         if poblacion.actualizar == True and dt > 1:
-            poblacion.actualizar_puntos()
+            poblacion.actualizar_puntos(1)
             poblacion.actualizar = False
             dt = 0
             t0 = ti
         
-        if dt >= 0 and dt <= 1 :
+        elif dt >= 0 and dt <= 1 :
             poblacion.iteracion(dt)
             poblacion.contagiar()
-            print(dt)
-
+            
         glfw.poll_events()
 
         glClear(GL_COLOR_BUFFER_BIT)

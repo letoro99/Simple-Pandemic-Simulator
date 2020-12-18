@@ -56,7 +56,7 @@ class Individuo:
         elif self.estado == 1:
             sg.drawSceneGraphNode(self.model_enfermo,pipeline,'transform')
         elif self.estado == 2:
-            sg.drawSceneGrapgNode(self.model_recuperado,pipeline,'transform')
+            sg.drawSceneGraphNode(self.model_recuperado,pipeline,'transform')
         else:
             pass
     
@@ -92,56 +92,69 @@ class Individuo:
     
 
 class Sociedad: # NOooOOOOooOo la S-palabra
-    def __init__(self,n,prob_contagio,radio_contagio,dias_recuperacion):
+    def __init__(self,n,prob_contagio,radio_contagio,dias_recuperacion,prob_morir):
 
         self.sanos = n-1
         self.enfermos = 1
         self.recuperados = 0
         self.fallecidos = 0
-        self.habitantes = n
+        self.transcurso = [[self.sanos,self.enfermos,self.recuperados,self.fallecidos]]
 
         self.listado = []
-        self.listado_enfermos = [0] # Guardo solo los indices de los enfermos para buscarlo en self.listado
-        self.listado_recuperados = [] # Guardar indices de los recuperados para no tomarlos en el metodo de contagiar
-        self.actualizar = True
+        self.actualizar = False
 
         self.prob_contagio = prob_contagio
         self.radio_contagio = radio_contagio
         self.dias_recuperacion = dias_recuperacion
+        self.prob_morir = prob_morir
 
-        for i in range(self.habitantes):
+        for i in range(self.sanos+1):
             self.listado.append(Individuo())
         self.listado[0].cambiar_estado(1)
 
     def iteracion(self,t):
         for individuo in self.listado:
             individuo.mover_disc(t)
+        pass
     
-    def actualizar_puntos(self):
-        for i in range(len(self.listado)):
+    def actualizar_puntos(self,first):
+        eliminar = []
+        for i in range(1,len(self.listado)):
             self.listado[i].nuevos_puntos()
-            #if i in self.listado_enfermos:
-            #    self.listado[i].dias_contagiados += 1
-            #    if rd.random() <= self.prob_morir:
-            #        self.listado.pop(i)
-            #        self.fallecidos += 1
-            #        self.enfermos -= 1
-            #    if self.listado[i].dias_contagiados > self.dias_recuperacion:
-            #        self.
-    
+            if self.listado[i].estado == 1 and first == 1:
+                self.listado[i].dias_contagiados += 1
+                if rd.random() <= self.prob_morir and self.listado[i].dias_contagiados <= self.dias_recuperacion:
+                    eliminar.append(i)
+                    self.enfermos -= 1
+                    self.fallecidos += 1
+                elif self.listado[i].dias_contagiados > self.dias_recuperacion:
+                    self.listado[i].cambiar_estado(2)
+                    self.enfermos -= 1
+                    self.recuperados += 1
+        n_elim = 0
+        for i in eliminar:
+            self.listado.pop(i-n_elim)
+            n_elim += 1
+        self.transcurso.append([self.sanos,self.enfermos,self.recuperados,self.fallecidos])
+        print(self.sanos,self.enfermos,self.recuperados,self.fallecidos,(self.sanos+self.enfermos+self.recuperados+self.fallecidos))
+
+
 
     def contagiar(self):
-        for i in self.listado_enfermos:
-            x, y = self.listado[i].posx_act, self.listado[i].posy_act
-            for j in range(len(self.listado)):
-                if i != j and not j in self.listado_recuperdados and rd.random() < self.prob_contagio and self.listado[j].posible_contagio(x,y,self.radio_contagio):
-                    self.listado[j].cambiar_estado(1)
-                    self.sanos -= 1
-                    self.enfermos += 1
+        for enfermo in self.listado:
+            if enfermo.estado == 1:
+                x,y = enfermo.posx_act, enfermo.posy_act
+                for individuo in self.listado:
+                    if individuo.estado == 0 and rd.random() <= self.prob_contagio and individuo.posible_contagio(x,y,self.radio_contagio):
+                        individuo.cambiar_estado(1)
+                        self.sanos -= 1
+                        self.enfermos += 1
+        pass
         
     def draw(self,pipeline):
         for individuo in self.listado:
             individuo.draw(pipeline)
+        pass
 
 class Mundo:
     def __init__(self,datos):
