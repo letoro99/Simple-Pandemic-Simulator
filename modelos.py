@@ -6,9 +6,11 @@ import transformations as tr
 import basic_shapes as bs
 import scene_graph as sg
 import easy_shaders as es
+
 import random as rd
 import math as mt
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Individuo:
     def __init__(self,num_grupo=0):
@@ -39,15 +41,24 @@ class Individuo:
         self.model_sano = sano_tr
         self.model_enfermo = enfermo_tr
         self.model_recuperado = recuperado_tr
-
         self.model = self.model_sano
-        self.posx_i, self.posy_i = 0, 0
-        self.posx_act, self.posy_act = 0, 0
-        self.posx_f, self.posy_f = rd.uniform(-0.5,0.5), rd.uniform(-0.5,0.5)
-        self.estado = 0 # 0: sano , 1: enfermo , 2: recuperado , si muere se borrara
-        self.grupo = num_grupo
-        self.dias_contagiados = 0
 
+        self.posx_act, self.posy_act = 0, 0
+        self.posx_i,self.posy_i = 0, 0
+
+        self.estado = 0 # 0: sano , 1: enfermo , 2: inmune , si muere se borrara
+        self.grupo = num_grupo
+        self.dias_contagiados = 1
+        self.prob_viajar = rd.uniform(0,0.05)
+
+        if self.grupo == 0:
+            self.posx_f, self.posy_f = rd.uniform(-0.9,-0.1), rd.uniform(0.1,0.9)
+        elif self.grupo == 1:
+            self.posx_f, self.posy_f = rd.uniform(0.1,0.9), rd.uniform(0.1,0.9)
+        elif self.grupo == 2:
+            self.posx_f, self.posy_f = rd.uniform(0.1,0.9), rd.uniform(-0.9,-0.1)
+        else:
+            self.posx_f, self.posy_f = rd.uniform(-0.9,-0.1), rd.uniform(-0.9,-0.1)
 
     def draw(self,pipeline):
         glUseProgram(pipeline.shaderProgram)
@@ -61,6 +72,10 @@ class Individuo:
             pass
     
     def cambiar_estado(self,nuevo_estado):
+        if nuevo_estado == 0:
+            self.model_sano.transform = self.model.transform
+            self.model = self.model_sano
+            self.estado = 0
         if nuevo_estado == 1:
             self.model_enfermo.transform = self.model.transform
             self.model = self.model_enfermo
@@ -77,6 +92,34 @@ class Individuo:
         self.posx_f , self.posy_f = rd.uniform(self.posx_i-0.1,self.posx_i+0.1),rd.uniform(self.posy_i-0.1,self.posy_i+0.1)
         while self.posx_f < -0.5 or self.posx_f > 0.5 or self.posy_f < -0.5 or self.posy_f > 0.5:
             self.posx_f , self.posy_f = rd.uniform(self.posx_i-0.1,self.posx_i+0.1),rd.uniform(self.posy_i-0.1,self.posy_i+0.1)
+        
+    def nuevo_puntos_pobla(self,cuarentena):
+        if rd.random() <= self.prob_viajar and cuarentena%2 == 0:
+            self.posx_i, self.posy_i = self.posx_f, self.posy_f
+            self.grupo = rd.randint(0,3)
+            if self.grupo == 0:
+                self.posx_f, self.posy_f = rd.uniform(-0.9,-0.1), rd.uniform(0.1,0.9)
+            elif self.grupo == 1:
+                self.posx_f, self.posy_f = rd.uniform(0.1,0.9), rd.uniform(0.1,0.9)
+            elif self.grupo == 2:
+                self.posx_f, self.posy_f = rd.uniform(0.1,0.9), rd.uniform(-0.9,-0.1)
+            else:
+                self.posx_f, self.posy_f = rd.uniform(-0.9,-0.1), rd.uniform(-0.9,-0.1)
+        else:
+            self.posx_i, self.posy_i = self.posx_f, self.posy_f
+            self.posx_f , self.posy_f = rd.uniform(self.posx_i-0.05,self.posx_i+0.05),rd.uniform(self.posy_i-0.05,self.posy_i+0.05)
+            if self.grupo == 0:
+                while self.posx_f < -0.9 or self.posx_f > -0.1 or self.posy_f < 0.1 or self.posy_f > 0.9:
+                    self.posx_f , self.posy_f = rd.uniform(self.posx_i-0.05,self.posx_i+0.05),rd.uniform(self.posy_i-0.05,self.posy_i+0.05)
+            elif self.grupo == 1:
+                while self.posx_f < 0.1 or self.posx_f > 0.9 or self.posy_f < 0.1 or self.posy_f > 0.9:
+                    self.posx_f , self.posy_f = rd.uniform(self.posx_i-0.05,self.posx_i+0.05),rd.uniform(self.posy_i-0.05,self.posy_i+0.05)
+            elif self.grupo == 2:
+                while self.posx_f < 0.1 or self.posx_f > 0.9 or self.posy_f < -0.9 or self.posy_f > -0.1:
+                    self.posx_f , self.posy_f = rd.uniform(self.posx_i-0.05,self.posx_i+0.05),rd.uniform(self.posy_i-0.05,self.posy_i+0.05)
+            else:
+                while self.posx_f < -0.9 or self.posx_f > -0.1 or self.posy_f < -0.9 or self.posy_f > -0.1:
+                    self.posx_f , self.posy_f = rd.uniform(self.posx_i-0.05,self.posx_i+0.05),rd.uniform(self.posy_i-0.05,self.posy_i+0.05)
     
     def mover_disc(self,t):
         self.posx_act = (1-t)*self.posx_i+t*self.posx_f
@@ -98,47 +141,57 @@ class Sociedad: # NOooOOOOooOo la S-palabra
         self.enfermos = 1
         self.recuperados = 0
         self.fallecidos = 0
-        self.transcurso = [[self.sanos,self.enfermos,self.recuperados,self.fallecidos]]
+        self.transcurso = [[self.sanos],[self.enfermos],[self.recuperados],[self.fallecidos]]
 
         self.listado = []
         self.actualizar = False
+        self.terminar = False
 
         self.prob_contagio = prob_contagio
         self.radio_contagio = radio_contagio
         self.dias_recuperacion = dias_recuperacion
         self.prob_morir = prob_morir
+        self.cuarentena = 0
 
-        for i in range(self.sanos+1):
-            self.listado.append(Individuo())
-        self.listado[0].cambiar_estado(1)
+        i = 0
+        while i != n+1:
+            self.listado.append(Individuo(int(i%4)))
+            i += 1
+        self.listado[rd.randint(0,3)].cambiar_estado(1)
 
     def iteracion(self,t):
         for individuo in self.listado:
             individuo.mover_disc(t)
-        pass
     
     def actualizar_puntos(self,first):
         eliminar = []
-        for i in range(1,len(self.listado)):
-            self.listado[i].nuevos_puntos()
+        for i in range(0,len(self.listado)):
+            self.listado[i].nuevo_puntos_pobla(self.cuarentena)
             if self.listado[i].estado == 1 and first == 1:
                 self.listado[i].dias_contagiados += 1
-                if rd.random() <= self.prob_morir and self.listado[i].dias_contagiados <= self.dias_recuperacion:
+                if rd.random() <= self.prob_morir and self.listado[i].dias_contagiados <= self.dias_recuperacion and self.listado[i].estado == 1:
                     eliminar.append(i)
                     self.enfermos -= 1
                     self.fallecidos += 1
                 elif self.listado[i].dias_contagiados > self.dias_recuperacion:
+                    self.listado[i].dias_contagiados = int(self.listado[i].dias_contagiados/2)+1
                     self.listado[i].cambiar_estado(2)
                     self.enfermos -= 1
                     self.recuperados += 1
+            elif self.listado[i].estado == 2 and first == 1:
+                self.listado[i].dias_contagiados -= 1
+                if self.listado[i].dias_contagiados == 1:
+                    self.listado[i].cambiar_estado(0)
+                    self.recuperados -= 1
+                    self.sanos += 1
         n_elim = 0
         for i in eliminar:
             self.listado.pop(i-n_elim)
             n_elim += 1
-        self.transcurso.append([self.sanos,self.enfermos,self.recuperados,self.fallecidos])
-        print(self.sanos,self.enfermos,self.recuperados,self.fallecidos,(self.sanos+self.enfermos+self.recuperados+self.fallecidos))
-
-
+        self.transcurso[0].append(self.sanos)
+        self.transcurso[1].append(self.enfermos)
+        self.transcurso[2].append(self.recuperados)
+        self.transcurso[3].append(self.fallecidos)
 
     def contagiar(self):
         for enfermo in self.listado:
@@ -149,15 +202,37 @@ class Sociedad: # NOooOOOOooOo la S-palabra
                         individuo.cambiar_estado(1)
                         self.sanos -= 1
                         self.enfermos += 1
-        pass
-        
+
     def draw(self,pipeline):
         for individuo in self.listado:
             individuo.draw(pipeline)
-        pass
 
 class Mundo:
     def __init__(self,datos):
+        gpu_sano = es.toGPUShape(bs.createColorQuad(0,1,0))
+        gpu_enfermo = es.toGPUShape(bs.createColorQuad(1,0,0))
+        gpu_repcuperado = es.toGPUShape(bs.createColorQuad(0,0,1))
+        self.datos = datos
+        self.mostrar_graficos = False
+    
+    def get_datos(self):
+        return self.datos
+    
+    def set_datos(self,nuevos_datos):
+        self.datos = nuevos_datos
+
+    def generar_plot(self):
+        x = np.arange(len(self.datos[0]))
+        fig, ax = plt.subplots()
+        ax.plot(x,self.datos[0], label='Sanos')
+        ax.plot(x,self.datos[1], label='Contagiados')
+        ax.plot(x,self.datos[2], label='Inmunes')
+        ax.plot(x,self.datos[3], label='Fallecidos')
+        ax.set_xlabel('Día')
+        ax.set_ylabel('Cantidad de personas')
+        ax.set_title('Transcurso de la epidemia')
+        ax.legend()
+        plt.show()
         pass
         
     
