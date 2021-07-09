@@ -1,7 +1,5 @@
-# tarea3_cc3501
+# Tarea 3 cc3501
+En esta tarea se creo una aplicación donde simula una pandemia
 
-# V0.1
- - Simulador de contagio en un ambiente cerrado
- - Espacio de un cuadrado de 1x1, con una pooblacion variable
- - Solo posee los algoritmos de enfermarse.
+FALTA AGREGAR DESCRIPCION Y COMANDOS DE USO
  
